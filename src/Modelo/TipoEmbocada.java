@@ -1,14 +1,8 @@
 package Modelo;
 
 /**
- * Enumeración que representa los diferentes tipos de embocada
- * posibles en el juego del balero.
- * 
- * Cada tipo de embocada tiene un puntaje asociado.
- * 
- * Responsabilidad:
- * - Definir los tipos de embocada.
- * - Asociar puntos a cada tipo.
+ * Enum que representa los tipos de embocadas posibles
+ * en el juego del balero junto con su puntaje asociado.
  */
 public enum TipoEmbocada {
 
@@ -19,24 +13,21 @@ public enum TipoEmbocada {
     PUNALADA(5),
     PURTINA(6),
     DOMINIO_REVES(8),
-    FALLA(0);
+    SIN_EMBOCADA(0);
 
-    private final int puntos; // el atributo es final porque el puntaje 
-    //de cada tipo no debe cambiar nunca. Eso hace al Enum inmutable
+    private final int puntos;
 
     /**
      * Constructor del enum.
-     * 
-     * @param puntos Puntaje asociado al tipo de embocada.
+     * @param puntos valor en puntos de la embocada
      */
-    TipoEmbocada(int puntos) {
+    private TipoEmbocada(int puntos) {
         this.puntos = puntos;
     }
 
     /**
      * Retorna el puntaje asociado al tipo de embocada.
-     * 
-     * @return puntos de la embocada.
+     * @return puntos de la embocada
      */
     public int getPuntos() {
         return puntos;
