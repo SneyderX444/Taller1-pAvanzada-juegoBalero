@@ -1,43 +1,47 @@
 package Vista;
 
-import java.awt.AlphaComposite;
-import java.awt.Graphics;
-import java.awt.Graphics2D;
-import java.awt.GridLayout;
-import javax.swing.BorderFactory;
-import javax.swing.JPanel;
+import javax.swing.*;
+import java.awt.*;
 
 /**
- * Panel visual de un equipo.
- * Contiene 3 jugadores y permite aplicar transparencia.
- *
- * Código de transparencia basado en:
- * Oracle Java 2D API - AlphaComposite.
+ * Representación visual de un jugador individual.
+ * Incluye nombre, foto y estadísticas.
  */
-public class PanelEquipo extends JPanel {
+public class PanelJugador extends JPanel {
+    private JLabel lblFoto;
+    private JLabel lblNombre;
+    private JLabel lblPuntos;
+    private JLabel lblIntentos;
 
-    private float alpha = 1f;
+    public PanelJugador(String nombre) {
+        setLayout(new BorderLayout(5, 5));
+        setBorder(BorderFactory.createLineBorder(new Color(220, 220, 220), 1));
+        setBackground(Color.WHITE);
 
-    public PanelEquipo(String nombre) {
-        this.setLayout(new GridLayout(3, 1, 5, 5));
-        this.setBorder(BorderFactory.createTitledBorder(nombre));
+        // Icono o foto (Requisito de diseño atractivo)
+        lblFoto = new JLabel("👤", SwingConstants.CENTER);
+        lblFoto.setFont(new Font("Segoe UI Emoji", Font.PLAIN, 45));
+        lblFoto.setOpaque(true);
+        lblFoto.setBackground(new Color(245, 245, 245));
 
-        for (int i = 1; i <= 3; i++) {
-            this.add(new PanelJugador("Jugador " + i));
-        }
+        lblNombre = new JLabel(nombre, SwingConstants.CENTER);
+        lblNombre.setFont(new Font("Arial", Font.BOLD, 13));
+
+        // Panel para datos numéricos
+        JPanel panelDatos = new JPanel(new GridLayout(2, 1));
+        panelDatos.setOpaque(false);
+        lblPuntos = new JLabel("Pts: 0", SwingConstants.CENTER);
+        lblIntentos = new JLabel("Int: 0", SwingConstants.CENTER);
+        panelDatos.add(lblPuntos);
+        panelDatos.add(lblIntentos);
+
+        add(lblNombre, BorderLayout.NORTH);
+        add(lblFoto, BorderLayout.CENTER);
+        add(panelDatos, BorderLayout.SOUTH);
     }
 
-    public void setTransparencia(float alpha) {
-        this.alpha = alpha;
-        repaint();
-    }
-
-    @Override
-    protected void paintComponent(Graphics g) {
-        Graphics2D g2 = (Graphics2D) g.create();
-        g2.setComposite(AlphaComposite.getInstance(
-                AlphaComposite.SRC_OVER, alpha));
-        super.paintComponent(g2);
-        g2.dispose();
+    public void actualizarDatos(int puntos, int intentos) {
+        lblPuntos.setText("Pts: " + puntos);
+        lblIntentos.setText("Int: " + intentos);
     }
 }

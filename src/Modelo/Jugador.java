@@ -3,6 +3,7 @@ package Modelo;
 import java.io.Serializable;
 
 public class Jugador implements Serializable {
+    private int intentosEfectivos = 0;
     private static final long serialVersionUID = 1L;
     private String nombre;
     private String codigo;
@@ -28,6 +29,15 @@ public class Jugador implements Serializable {
         this.puntaje = 0;
         this.intentos = 0;
     }
+    
+    
+    public void registrarEmbocadaEfectiva() {
+    this.intentosEfectivos++;
+    }
+    
+    public int getIntentosEfectivos() {
+    return intentosEfectivos;
+   }
 
     // Getters y Setters
     public String getNombre() { return nombre; }

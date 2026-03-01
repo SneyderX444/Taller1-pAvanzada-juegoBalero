@@ -11,7 +11,7 @@ public class ResultadosRAF {
     private final String RUTA = "Specs/data/historico.dat";
     private final int TAM_NOMBRE = 40; // Tamaño fijo en bytes para el nombre
 
-    public void guardarGanador(String nombreEquipo, int puntos) {
+    public void guardarResultado(String nombreEquipo, int puntos) {
         File dir = new File("Specs/data");
         if (!dir.exists()) dir.mkdirs();
 
