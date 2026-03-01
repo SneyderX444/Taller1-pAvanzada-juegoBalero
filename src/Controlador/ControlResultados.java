@@ -46,7 +46,7 @@ public class ControlResultados {
      */
     public void registrarResultadoFinal(Equipo e) {
         if (e != null) {
-            modeloPersistencia.guardarResultado(e.getNombre(), e.getPuntajeTotal());
+            modeloPersistencia.guardarResultado(e);
         }
     }
 }

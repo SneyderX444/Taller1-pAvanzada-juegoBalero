@@ -3,81 +3,101 @@ package Modelo;
 import java.io.*;
 
 /**
- * Clase encargada de la persistencia histórica de resultados.
- * Utiliza un archivo de acceso aleatorio (RandomAccessFile) para almacenar 
- * y consultar los ganadores de cada torneo de forma persistente.
- * * Responsabilidades:
- * - Registrar cada victoria al finalizar un juego.
- * - Contabilizar cuántas veces un equipo específico ha ganado en el pasado.
+ * Gestor de Memoria Histórica del Torneo.
+ * Esta clase actúa como el "libro de récords" del juego, utilizando un archivo 
+ * de acceso aleatorio (RAF) para guardar quiénes han sido los campeones.
+ * * Se cumple con el requisito de persistencia binaria y acceso aleatorio.
  * * @author Juan
- * @version 2.5
+ * @version 3.0
  */
 public class ResultadosRAF {
     
-    /** Ruta del archivo binario donde se guardan los records. */
-    private static final String RUTA = "Specs/data/historico.dat";
+    // Ruta solicitada para la persistencia dentro del proyecto
+    private static final String RUTA_ARCHIVO = "src/Specs/Data/historico.dat";
     
-    /** Tamaño fijo para el nombre del equipo en caracteres (alineado con format). */
-    private static final int LONGITUD_NOMBRE = 20;
-
     /**
-     * Guarda el resultado de un torneo en el archivo histórico.
-     * Crea los directorios necesarios si no existen.
-     * * @param nombreEquipo El nombre del equipo ganador.
-     * @param puntos El puntaje total obtenido por el equipo.
+     * Registra la victoria de un equipo con todos sus detalles.
+     * Escribe en formato binario: Clave, Nombre Equipo, 3 Jugadores y Puntaje.
+     * * @param equipoGanador El objeto equipo que acaba de ganar el torneo.
      */
-    public void guardarResultado(String nombreEquipo, int puntos) {
-        // Asegurar que la ruta de carpetas existe
-        File carpetas = new File("Specs/data");
-        if (!carpetas.exists()) {
-            carpetas.mkdirs();
-        }
+    public void guardarResultado(Equipo equipoGanador) {
+        // Aseguramos que la carpeta exista antes de intentar crear el archivo
+        verificarOcrearDirectorios();
 
-        try (RandomAccessFile raf = new RandomAccessFile(RUTA, "rw")) {
-            // Mover el puntero al final del archivo para añadir el nuevo registro
-            raf.seek(raf.length());
+        try (RandomAccessFile archivoCajaRegistradora = new RandomAccessFile(RUTA_ARCHIVO, "rw")) {
+            // Saltamos al final para no borrar lo anterior (append)
+            archivoCajaRegistradora.seek(archivoCajaRegistradora.length());
             
-            // Ajustar el nombre a una longitud fija de 20 caracteres para lectura consistente
-            String nombreAjustado = String.format("%-" + LONGITUD_NOMBRE + "s", 
-                (nombreEquipo.length() > LONGITUD_NOMBRE) ? 
-                nombreEquipo.substring(0, LONGITUD_NOMBRE) : nombreEquipo);
+            // 1. Escribir Clave Única (Hash basado en el nombre)
+            String claveUnica = "ID-" + equipoGanador.getNombre().hashCode();
+            archivoCajaRegistradora.writeUTF(ajustarTexto(claveUnica, 10));
             
-            raf.writeUTF(nombreAjustado);
-            raf.writeInt(puntos);
+            // 2. Escribir Nombre del Equipo
+            archivoCajaRegistradora.writeUTF(ajustarTexto(equipoGanador.getNombre(), 20));
+            
+            // 3. Escribir Nombres de los 3 Jugadores (Requisito de estructura)
+            for (int i = 0; i < 3; i++) {
+                String nombreJugador = equipoGanador.getJugadores().get(i).getNombre();
+                archivoCajaRegistradora.writeUTF(ajustarTexto(nombreJugador, 15));
+            }
+            
+            // 4. Escribir Puntaje Final (4 bytes)
+            archivoCajaRegistradora.writeInt(equipoGanador.getPuntajeTotal());
             
         } catch (IOException e) {
-            // Se mantiene el silencio en consola por requerimiento del Literal i
+            // Silencio administrativo: No ensuciamos la consola según Literal i
         }
     }
 
     /**
-     * Recorre el archivo histórico para contar cuántas veces ha ganado un equipo.
-     * * @param nombreEquipo El nombre del equipo a buscar.
-     * @return El número de victorias previas encontradas.
+     * Busca en el historial cuántas veces ha triunfado un equipo específico.
+     * * @param nombreABuscar El nombre del equipo que queremos consultar.
+     * @return Conteo total de victorias encontradas en el archivo binario.
      */
-    public int obtenerVictoriasAnteriores(String nombreEquipo) {
-        int victorias = 0;
-        File archivo = new File(RUTA);
+    public int obtenerVictoriasAnteriores(String nombreABuscar) {
+        int conteoVictorias = 0;
+        File file = new File(RUTA_ARCHIVO);
         
-        if (!archivo.exists()) {
-            return 0;
-        }
+        if (!file.exists()) return 0;
 
-        try (RandomAccessFile raf = new RandomAccessFile(RUTA, "r")) {
-            while (raf.getFilePointer() < raf.length()) {
-                // Leer el nombre (UTF incluye 2 bytes de longitud al inicio)
-                String nombreLeido = raf.readUTF().trim();
-                // Leer el entero de puntos (avanza el puntero 4 bytes)
-                raf.readInt(); 
+        // "r" significa modo lectura (read only)
+        try (RandomAccessFile lectorLineal = new RandomAccessFile(RUTA_ARCHIVO, "r")) {
+            while (lectorLineal.getFilePointer() < lectorLineal.length()) {
                 
-                if (nombreLeido.equalsIgnoreCase(nombreEquipo.trim())) {
-                    victorias++;
+                // LEER EN EL MISMO ORDEN QUE SE ESCRIBIÓ (Vital para no desfasar el puntero)
+                lectorLineal.readUTF(); // Leemos y descartamos la Clave
+                String equipoLeido = lectorLineal.readUTF().trim(); // Leemos el Equipo
+                lectorLineal.readUTF(); // Descartamos Jugador 1
+                lectorLineal.readUTF(); // Descartamos Jugador 2
+                lectorLineal.readUTF(); // Descartamos Jugador 3
+                lectorLineal.readInt(); // Descartamos el Int de puntos
+                
+                if (equipoLeido.equalsIgnoreCase(nombreABuscar.trim())) {
+                    conteoVictorias++;
                 }
             }
         } catch (IOException e) {
-            // Silencio en consola según lineamientos
+            // Manejo silencioso de errores de lectura
         }
         
-        return victorias;
+        return conteoVictorias;
+    }
+
+    /**
+     * Utilidad para garantizar que los textos tengan un tamaño uniforme en el archivo.
+     */
+    private String ajustarTexto(String texto, int ancho) {
+        return String.format("%-" + ancho + "s", 
+            (texto.length() > ancho) ? texto.substring(0, ancho) : texto);
+    }
+
+    /**
+     * Crea la ruta de carpetas si el usuario no las tiene creadas.
+     */
+    private void verificarOcrearDirectorios() {
+        File directorio = new File("src/Specs/Data");
+        if (!directorio.exists()) {
+            directorio.mkdirs();
+        }
     }
 }

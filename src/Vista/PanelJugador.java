@@ -1,54 +1,108 @@
 package Vista;
 
 import javax.swing.*;
+import javax.swing.border.EmptyBorder;
 import java.awt.*;
 
 /**
- * Representación visual de un jugador individual.
- * Cumple con el lineamiento de diseño atractivo (Literal h).
+ * Avatar y Estadísticas del Jugador.
+ * Representa la "tarjeta de identidad" de cada jugador en la cancha.
+ * Incluye lógica de resaltado visual para indicar quién tiene el turno de lanzamiento.
+ * * @author Juan
+ * @version 3.0
  */
 public class PanelJugador extends JPanel {
-    private final JLabel lblFoto;
-    private final JLabel lblNombre;
-    private final JLabel lblPuntos;
-    private final JLabel lblIntentos;
 
-    public PanelJugador(String nombre) {
-        setLayout(new BorderLayout(5, 5));
-        setBorder(BorderFactory.createLineBorder(new Color(230, 230, 230)));
-        setBackground(Color.WHITE);
-
-        // Representación visual atractiva (Emoji como placeholder de foto)
-        lblFoto = new JLabel("👤", SwingConstants.CENTER);
-        lblFoto.setFont(new Font("Segoe UI Emoji", Font.PLAIN, 40));
-        lblFoto.setOpaque(true);
-        lblFoto.setBackground(new Color(248, 249, 250));
-
-        lblNombre = new JLabel(nombre, SwingConstants.CENTER);
-        lblNombre.setFont(new Font("SansSerif", Font.BOLD, 12));
-
-        JPanel pnlStats = new JPanel(new GridLayout(2, 1));
-        pnlStats.setOpaque(false);
-        lblPuntos = new JLabel("Pts: 0", SwingConstants.CENTER);
-        lblIntentos = new JLabel("Int: 0", SwingConstants.CENTER);
-        pnlStats.add(lblPuntos);
-        pnlStats.add(lblIntentos);
-
-        add(lblNombre, BorderLayout.NORTH);
-        add(lblFoto, BorderLayout.CENTER);
-        add(pnlStats, BorderLayout.SOUTH);
-    }
-
-    public void actualizarDatos(int puntos, int intentos) {
-        lblPuntos.setText("Pts: " + puntos);
-        lblIntentos.setText("Int: " + intentos);
-    }
-
-    public void setNombre(String nombre) {
-        lblNombre.setText(nombre);
-    }
+    private final JLabel iconoAvatar;
+    private final JLabel etiquetaNombre;
+    private final JLabel etiquetaPuntos;
+    private final JLabel etiquetaIntentos;
     
+    // Colores de diseño para la "Gama Alta"
+    private final Color COLOR_FONDO_NORMAL = Color.WHITE;
+    private final Color COLOR_FONDO_ACTIVO = new Color(225, 235, 245); // Azul grisáceo elegante
+    private final Color COLOR_BORDE_NORMAL = new Color(230, 230, 230);
+    private final Color COLOR_BORDE_ACTIVO = new Color(52, 152, 219);  // Azul vibrante
+
+    /**
+     * Construye la tarjeta visual del jugador con un diseño limpio y moderno.
+     * @param nombre Inicial del jugador (será actualizada por el controlador).
+     */
+    public PanelJugador(String nombre) {
+        // Configuración de la "tarjeta"
+        setLayout(new BorderLayout(5, 5));
+        setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(COLOR_BORDE_NORMAL, 1),
+                new EmptyBorder(8, 8, 8, 8)
+        ));
+        setBackground(COLOR_FONDO_NORMAL);
+
+        // 1. EL AVATAR (Literal h: Diseño atractivo)
+        iconoAvatar = new JLabel("👤", SwingConstants.CENTER);
+        iconoAvatar.setFont(new Font("Segoe UI Emoji", Font.PLAIN, 35));
+        iconoAvatar.setOpaque(false);
+
+        // 2. EL NOMBRE (Destacado en la parte superior)
+        etiquetaNombre = new JLabel(nombre.toUpperCase(), SwingConstants.CENTER);
+        etiquetaNombre.setFont(new Font("SansSerif", Font.BOLD, 12));
+        etiquetaNombre.setForeground(new Color(44, 62, 80));
+
+        // 3. LAS ESTADÍSTICAS (Puntos e Intentos)
+        JPanel contenedorStats = new JPanel(new GridLayout(2, 1, 2, 2));
+        contenedorStats.setOpaque(false);
+        
+        etiquetaPuntos = new JLabel("Puntos: 0", SwingConstants.CENTER);
+        etiquetaPuntos.setFont(new Font("Monospaced", Font.BOLD, 11));
+        
+        etiquetaIntentos = new JLabel("Intentos: 0", SwingConstants.CENTER);
+        etiquetaIntentos.setFont(new Font("Monospaced", Font.PLAIN, 10));
+
+        contenedorStats.add(etiquetaPuntos);
+        contenedorStats.add(etiquetaIntentos);
+
+        // Ensamblaje de la pieza
+        add(etiquetaNombre, BorderLayout.NORTH);
+        add(iconoAvatar, BorderLayout.CENTER);
+        add(contenedorStats, BorderLayout.SOUTH);
+    }
+
+    /**
+     * Cambia el aspecto visual del panel si el jugador es el que está lanzando.
+     * REQUISITO: Poner más oscura/resaltada la casilla del jugador activo.
+     * @param esElActivo true si el jugador tiene el turno actual.
+     */
+    public void setResaltado(boolean esElActivo) {
+        if (esElActivo) {
+            setBackground(COLOR_FONDO_ACTIVO);
+            setBorder(BorderFactory.createCompoundBorder(
+                    BorderFactory.createLineBorder(COLOR_BORDE_ACTIVO, 2),
+                    new EmptyBorder(7, 7, 7, 7) // Ajuste para compensar el borde más grueso
+            ));
+            iconoAvatar.setText("🎯"); // Cambia el avatar por una diana al apuntar
+        } else {
+            setBackground(COLOR_FONDO_NORMAL);
+            setBorder(BorderFactory.createCompoundBorder(
+                    BorderFactory.createLineBorder(COLOR_BORDE_NORMAL, 1),
+                    new EmptyBorder(8, 8, 8, 8)
+            ));
+            iconoAvatar.setText("👤");
+        }
+        revalidate();
+        repaint();
+    }
+
+    /**
+     * Actualiza los contadores de rendimiento del jugador en tiempo real.
+     */
+    public void actualizarDatos(int puntos, int intentos) {
+        etiquetaPuntos.setText("Puntos: " + puntos);
+        etiquetaIntentos.setText("Lanzados: " + intentos);
+    }
+
+    /**
+     * Cambia el nombre mostrado en la tarjeta.
+     */
     public void actualizarNombre(String nombre) {
-    this.lblNombre.setText(nombre);
-}
+        this.etiquetaNombre.setText(nombre.trim().toUpperCase());
+    }
 }

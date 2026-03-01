@@ -5,222 +5,280 @@ import Vista.PanelEquipo;
 import Vista.PanelJugador;
 import Vista.VistaPrincipal;
 import java.io.*;
+import java.awt.Color;
 import java.util.List;
 import javax.swing.*;
 import javax.swing.filechooser.FileNameExtensionFilter;
 
 /**
- * Controlador Principal del Sistema (Mediador).
- * Coordina la comunicación entre la Vista y el Modelo, gestionando el flujo
- * del torneo, la persistencia de resultados y los requisitos de interfaz.
+ * El Director de Orquesta (Controlador Principal).
+ * Su misión es hacer que la Vista y el Modelo hablen el mismo idioma sin tocarse.
+ * Gestiona el cronómetro, la lógica de turnos y la persistencia histórica.
  * * @author Juan
- * @version 3.0
+ * @version 3.5 (Edición Final)
  */
 public class ControlPrincipal {
 
     private final VistaPrincipal vista;
     private final GestionConfiguracion gestionConfig;
     private final ResultadosRAF historicoDAO;
+    
     private Juego juego;
     private Timer cronometro;
     private int tiempoRestante;
 
     /**
-     * Inicializa los componentes base y muestra los créditos iniciales.
+     * Prepara el escenario: inicializa herramientas y muestra quién hizo el programa.
      */
     public ControlPrincipal() {
         this.vista = new VistaPrincipal();
         this.gestionConfig = new GestionConfiguracion();
         this.historicoDAO = new ResultadosRAF();
 
-        asignarEventos();
-        cargarIntegrantesAlInicio();
+        configurarInteracciones();
+        saludarYPresentarIntegrantes();
         this.vista.setVisible(true);
     }
 
     /**
-     * Vincula las acciones de los botones de la vista con los métodos del controlador.
+     * Conecta los botones físicos de la interfaz con sus funciones lógicas.
      */
-    private void asignarEventos() {
-        vista.getBtnCargar().addActionListener(e -> menuCargarEIniciar());
-        vista.getPanelJuego().getBtnLanzar().addActionListener(e -> procesoLanzamiento());
+    private void configurarInteracciones() {
+        // Al presionar "Cargar", buscamos el archivo y lanzamos el juego
+        vista.getBtnCargar().addActionListener(e -> flujoCargaEInicio());
+        
+        // El botón de lanzar balero en la pantalla de juego
+        vista.getPanelJuego().getBtnLanzar().addActionListener(e -> ejecutarLanzamiento());
     }
 
     /**
-     * Gestiona la carga del archivo .properties y la transición a la pantalla de juego.
+     * Orquestador del inicio: Selecciona archivo, divide el tiempo y arranca.
      */
-    private void menuCargarEIniciar() {
-        JFileChooser chooser = new JFileChooser();
-        chooser.setFileFilter(new FileNameExtensionFilter("Configuración (.properties)", "properties"));
+    private void flujoCargaEInicio() {
+        JFileChooser explorador = new JFileChooser();
+        explorador.setFileFilter(new FileNameExtensionFilter("Configuración de Equipos (.properties)", "properties"));
 
-        if (chooser.showOpenDialog(vista) == JFileChooser.APPROVE_OPTION) {
+        if (explorador.showOpenDialog(vista) == JFileChooser.APPROVE_OPTION) {
             try {
-                List<Equipo> cargados = gestionConfig.leerArchivoConfiguracion(chooser.getSelectedFile().getAbsolutePath());
+                // 1. Intentamos leer los equipos del archivo seleccionado
+                List<Equipo> equiposLeidos = gestionConfig.leerArchivoConfiguracion(explorador.getSelectedFile().getAbsolutePath());
                 
-                if (cargados.isEmpty()) {
-                    mostrarError("El archivo no contiene equipos válidos.");
+                if (equiposLeidos.isEmpty()) {
+                    avisarUsuario("El archivo está vacío. Por favor selecciona uno válido.");
                     return;
                 }
 
-                int tiempo = Integer.parseInt(vista.getTextFieldTiempo().getText());
-                this.juego = new Juego(cargados, tiempo);
+                // 2. Lógica del Tiempo (REQUISITO: Tiempo grupal dividido entre 3)
+                int tiempoTotalGrupo = Integer.parseInt(vista.getTextFieldTiempo().getText());
+                int tiempoPorCadaJugador = tiempoTotalGrupo / 3;
 
-                actualizarInterfazNombres();
+                // 3. Creamos el objeto Juego con la repartición de tiempo lista
+                this.juego = new Juego(equiposLeidos, tiempoPorCadaJugador);
+
+                // 4. Preparamos la interfaz visual
+                dibujarNombresEnPantalla();
                 vista.mostrarPanel("JUEGO"); 
-                prepararTurno();
+                prepararSiguienteTurno();
 
-                JOptionPane.showMessageDialog(vista, "¡Torneo Iniciado!");
+                //Muestra al jugador el tiempo que tendra cada jugador para lanzar
+                JOptionPane.showMessageDialog(vista, "¡Configuración cargada! El tiempo se dividió en " + tiempoPorCadaJugador + "s por jugador.");
+                
+            
+            //Excepciones si se ingresa un valor invalido y una expeción más general
             } catch (NumberFormatException nfe) {
-                mostrarError("El tiempo debe ser un valor numérico.");
+                avisarUsuario("¡Error! Debes ingresar un número válido en el campo de tiempo.");
             } catch (Exception ex) {
-                mostrarError("Error al iniciar: " + ex.getMessage());
+                avisarUsuario("Algo salió mal al iniciar: " + ex.getMessage());
             }
         }
     }
 
     /**
-     * Sincroniza los nombres de equipos y jugadores desde el modelo a la vista.
+     * Escribe los nombres del modelo en las etiquetas de la vista para que el usuario sepa quién es quién.
      */
-    private void actualizarInterfazNombres() {
-        List<Equipo> eqs = juego.getEquipos();
-        for (int i = 0; i < eqs.size(); i++) {
-            Equipo eq = eqs.get(i);
-            PanelEquipo pnlEq = vista.getPanelJuego().getEquipo(i);
-            pnlEq.setNombreEquipo(eq.getNombre());
+    private void dibujarNombresEnPantalla() {
+        List<Equipo> listaEquipos = juego.getEquipos();
+        for (int i = 0; i < listaEquipos.size(); i++) {
+            Equipo eq = listaEquipos.get(i);
+            PanelEquipo pnl = vista.getPanelJuego().getEquipo(i);
+            
+            pnl.setNombreEquipo(eq.getNombre()); // Nombre del Grupo
             
             for (int j = 0; j < eq.getJugadores().size(); j++) {
                 String nombreJug = eq.getJugadores().get(j).getNombre();
-                pnlEq.getPanelJugador(j).actualizarNombre(nombreJug);
+                pnl.getPanelJugador(j).actualizarNombre(nombreJug); // Nombre de cada integrante
             }
         }
     }
 
     /**
-     * Ejecuta la lógica de lanzamiento, actualiza puntos y muestra el resultado.
+     * Acción de lanzar el balero: calcula puntos, actualiza el panel del jugador y muestra el mensaje.
      */
-    private void procesoLanzamiento() {
+    private void ejecutarLanzamiento() {
         if (juego == null) return;
 
-        TipoEmbocada result = juego.lanzarBalero();
-        juego.registrarResultado(result);
+        // Lanzamos y registramos en el modelo
+        TipoEmbocada resultado = juego.lanzarBalero();
+        juego.registrarResultado(resultado);
         
-        int eIdx = juego.getIndiceEquipoActual();
-        int jIdx = juego.getIndiceJugadorActual();
-        Jugador j = juego.getJugadorActual();
+        // Obtenemos quién lanzó para actualizar su cuadrito en la vista
+        int idxEquipo = juego.getIndiceEquipoActual();
+        int idxJugador = juego.getIndiceJugadorActual();
+        Jugador lanzador = juego.getJugadorActual();
 
-        PanelJugador pnl = vista.getPanelJuego().getEquipo(eIdx).getPanelJugador(jIdx);
-        pnl.actualizarDatos(j.getPuntos(), j.getIntentos());
+        PanelJugador casillaVisual = vista.getPanelJuego().getEquipo(idxEquipo).getPanelJugador(idxJugador);
+        casillaVisual.actualizarDatos(lanzador.getPuntos(), lanzador.getIntentos());
         
-        vista.getPanelJuego().setMensaje("Resultado: " + result.getDescripcion() + " (+" + result.getPuntos() + " pts)");
+        vista.getPanelJuego().setMensaje("¡" + lanzador.getNombre() + " hizo una " + resultado.getDescripcion() + "!");
     }
 
     /**
-     * Configura el estado visual para el nuevo turno y reinicia el cronómetro.
+     * Configura el escenario para que el jugador actual lance.
+     * REQUISITO: Resalta al equipo y pone más oscura la casilla del jugador activo.
      */
-    private void prepararTurno() {
-        int eIdx = juego.getIndiceEquipoActual();
-        Jugador j = juego.getJugadorActual();
+    private void prepararSiguienteTurno() {
+        int eActivo = juego.getIndiceEquipoActual();
+        int jActivo = juego.getIndiceJugadorActual();
+        Jugador player = juego.getJugadorActual();
 
-        actualizarFocoVisual(eIdx);
-        vista.getPanelJuego().setMensaje("Turno actual: " + j.getNombre());
-        gestionarCronometro(juego.getTiempoPorJugador());
+        // 1. Efecto Difuminado: Resalta al equipo completo
+        aplicarEfectoEnfoque(eActivo);
+        
+        // 2. Resaltado Específico: Pone oscura la casilla del jugador que tiene el turno
+        for (int i = 0; i < 3; i++) {
+            for (int j = 0; j < 3; j++) {
+                boolean esSuTurnoReal = (i == eActivo && j == jActivo);
+                vista.getPanelJuego().getEquipo(i).getPanelJugador(j).setResaltado(esSuTurnoReal);
+            }
+        }
+        
+        vista.getPanelJuego().setMensaje("Esperando lanzamiento de: " + player.getNombre());
+        iniciarCuentaRegresiva(juego.getTiempoPorJugador());
     }
 
     /**
-     * Controla el tiempo de cada turno. Al agotarse, avanza automáticamente al siguiente jugador.
-     * @param seg Segundos de duración del turno.
+     * El corazón del tiempo. Si llega a cero, el turno pasa automáticamente.
      */
-    private void gestionarCronometro(int seg) {
+    private void iniciarCuentaRegresiva(int segundos) {
         if (cronometro != null) cronometro.stop();
-        this.tiempoRestante = seg;
+        this.tiempoRestante = segundos;
         
         cronometro = new Timer(1000, e -> {
             tiempoRestante--;
-            vista.getPanelJuego().getLblTiempo().setText(tiempoRestante + "s");
+            vista.getPanelJuego().getLblTiempo().setText("⏱ " + tiempoRestante + "s");
+            
             if (tiempoRestante <= 0) {
                 cronometro.stop();
-                avanzarTurno();
+                JOptionPane.showMessageDialog(vista, "¡Se agotó el tiempo para este turno!");
+                avanzarLógicaDeTurno();
             }
         });
         cronometro.start();
     }
 
     /**
-     * Cambia el turno. Si no hay más jugadores, finaliza el juego y procesa al ganador.
+     * Pasa al siguiente jugador o termina el juego si ya todos lanzaron.
      */
-    private void avanzarTurno() {
+    private void avanzarLógicaDeTurno() {
         juego.siguienteJugador();
         if (juego.juegoTerminado()) {
             cronometro.stop();
-            procesarFinalizacion();
+            gestionarFinalDelTorneo();
         } else {
-            prepararTurno();
+            prepararSiguienteTurno();
         }
     }
 
     /**
-     * Calcula el ganador, consulta el histórico en el archivo RAF y muestra los resultados finales.
-     * Requisito: Mostrar cuántas veces ha ganado el equipo anteriormente.
+     * Cierre del torneo: Calcula ganador y usa el RAF para mostrar estadísticas históricas.
      */
-    private void procesarFinalizacion() {
-        List<Equipo> lista = juego.getEquipos();
-        Equipo ganador = lista.get(0);
+    /**
+     * Finaliza la competencia, determina al campeón y gestiona la persistencia histórica.
+     * * Este método realiza tres tareas críticas:
+     * 1. Compara los puntajes finales de todos los equipos participantes.
+     * 2. Consulta el archivo binario (RAF) para obtener estadísticas previas del ganador.
+     * 3. Registra la nueva victoria incluyendo Clave, Equipo, Jugadores y Puntos.
+     * * Cumple con el requerimiento de mostrar el historial de victorias antes de 
+     * cerrar el ciclo del juego.
+     */
+    private void gestionarFinalDelTorneo() {
+        List<Equipo> participantes = juego.getEquipos();
         
-        // Determinar ganador
-        for (Equipo eq : lista) {
-            eq.calcularPuntajeTotal();
-            if (eq.getPuntajeTotal() > ganador.getPuntajeTotal()) {
-                ganador = eq;
+        // Asumimos inicialmente que el primer equipo es el campeón
+        Equipo campeon = participantes.get(0);
+        
+        // 1. Fase de Evaluación: Buscamos al equipo con el puntaje más alto
+        for (Equipo eq : participantes) {
+            eq.calcularPuntajeTotal(); // Aseguramos que el puntaje esté actualizado
+            if (eq.getPuntajeTotal() > campeon.getPuntajeTotal()) {
+                campeon = eq;
             }
         }
 
-        // Consultar y guardar en RAF (Acceso Aleatorio)
-        int victoriasPrevias = historicoDAO.obtenerVictoriasAnteriores(ganador.getNombre());
-        historicoDAO.guardarResultado(ganador.getNombre(), ganador.getPuntajeTotal());
-
-        // Construcción del mensaje final
-        StringBuilder sb = new StringBuilder();
-        sb.append("🏆 TORNEO FINALIZADO 🏆\n\n");
-        sb.append("Ganador: ").append(ganador.getNombre()).append("\n");
-        sb.append("Puntaje: ").append(ganador.getPuntajeTotal()).append(" pts\n");
-        sb.append("---------------------------------\n");
+        // 2. Fase de Persistencia (Uso de RandomAccessFile)
+        // Consultamos cuántas veces ha ganado este equipo en torneos pasados
+        // Se hace ANTES de guardar la victoria actual para que el conteo sea exacto
+        int recordsAnteriores = historicoDAO.obtenerVictoriasAnteriores(campeon.getNombre());
         
-        if (victoriasPrevias > 0) {
-            sb.append("⭐ ¡Este equipo ha ganado ").append(victoriasPrevias)
-              .append(victoriasPrevias == 1 ? " vez" : " veces").append(" anteriormente!");
+        // Guardamos el registro completo del equipo campeón en el archivo binario
+        // Estructura: [Clave] [Nombre Equipo] [Jugador 1] [Jugador 2] [Jugador 3] [Puntaje]
+        historicoDAO.guardarResultado(campeon);
+
+        // 3. Fase de Interfaz: Construcción del mensaje de gloria
+        String mensajeHistorial;
+        if (recordsAnteriores > 0) {
+            mensajeHistorial = String.format("Este equipo ya ha ganado el torneo %d %s anteriormente.",
+                    recordsAnteriores, (recordsAnteriores == 1 ? "vez" : "veces"));
         } else {
-            sb.append("🆕 ¡Esta es la primera victoria del equipo!");
+            mensajeHistorial = "Primera vez que este equipo gana.";
         }
 
-        JOptionPane.showMessageDialog(vista, sb.toString(), "Resultados Históricos", 1);
+        String resumenFinal = String.format(
+            "¡FELICITACIONES AL CAMPEÓN! \n\n" +
+            "EQUIPO: %s\n" +
+            "PUNTAJE TOTAL: %d pts\n" +
+            "------------------------------------------\n" +
+            "%s",
+            campeon.getNombre().trim().toUpperCase(),
+            campeon.getPuntajeTotal(),
+            mensajeHistorial
+        );
+
+        // Mostramos el Hall de la Fama y regresamos al menú principal
+        JOptionPane.showMessageDialog(vista, resumenFinal, "Resultados", JOptionPane.INFORMATION_MESSAGE);
+        
+        // Limpiamos el rastro del juego actual y volvemos al inicio
         vista.mostrarPanel("MENU");
     }
 
     /**
-     * Aplica el efecto de difuminado (Literal g) resaltando solo al equipo activo.
+     * Controla la transparencia de los paneles de equipo (Principio de Enfoque).
      */
-    private void actualizarFocoVisual(int activo) {
+    private void aplicarEfectoEnfoque(int indiceBrillante) {
         for (int i = 0; i < 3; i++) {
-            vista.getPanelJuego().getEquipo(i).setTransparencia(i == activo ? 1.0f : 0.3f);
+            // 1.0f = Opaco (Visible), 0.3f = Transparente (Difuminado)
+            vista.getPanelJuego().getEquipo(i).setTransparencia(i == indiceBrillante ? 1.0f : 0.3f);
         }
     }
 
     /**
-     * Carga y muestra los créditos desde el archivo de texto al iniciar la app.
+     * Cumple con el Literal i: Carga integrantes desde un .txt sin errores fatales.
      */
-    private void cargarIntegrantesAlInicio() {
-        File f = new File("src/Docs/Integrantes/Integrantes.txt");
-        if(!f.exists()) return;
+    private void saludarYPresentarIntegrantes() {
+        File archivoInfo = new File("src/Docs/Integrantes/Integrantes.txt");
+        if(!archivoInfo.exists()) return;
         
-        try (BufferedReader br = new BufferedReader(new FileReader(f))) {
-            StringBuilder sb = new StringBuilder("EQUIPO DE DESARROLLO:\n");
-            String s;
-            while ((s = br.readLine()) != null) sb.append("- ").append(s).append("\n");
-            JOptionPane.showMessageDialog(vista, sb.toString(), "Créditos", 1);
-        } catch (IOException e) { /* Falla silenciosa por requerimiento */ }
+        try (BufferedReader lector = new BufferedReader(new FileReader(archivoInfo))) {
+            StringBuilder lista = new StringBuilder("DESARROLLADO POR:\n");
+            String linea;
+            while ((linea = lector.readLine()) != null) {
+                lista.append("• ").append(linea).append("\n");
+            }
+            JOptionPane.showMessageDialog(vista, lista.toString(), "Créditos del Taller", 1);
+        } catch (IOException e) { /* Silencio solicitado */ }
     }
 
-    private void mostrarError(String m) {
-        JOptionPane.showMessageDialog(vista, m, "Error", 0);
+    private void avisarUsuario(String mensaje) {
+        JOptionPane.showMessageDialog(vista, mensaje, "Aviso del Sistema", JOptionPane.WARNING_MESSAGE);
     }
 }
