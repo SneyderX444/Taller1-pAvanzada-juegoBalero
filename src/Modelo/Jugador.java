@@ -1,81 +1,105 @@
 package Modelo;
 
-/**
- * Representa un jugador dentro del juego del balero.
- * Cada jugador mantiene su propio puntaje, número de intentos
- * y cantidad de embocadas exitosas.
- */
-public class Jugador {
+import java.io.Serializable;
 
-    private String codigo;
+/**
+ * Representa a un jugador dentro de un equipo en el juego del Balero.
+ *
+ * Responsabilidades:
+ * - Almacenar información del jugador
+ * - Gestionar su puntaje
+ * - Registrar intentos realizados
+ *
+ * Pertenece a la capa Modelo (MVC).
+ *
+ * No contiene lógica de interfaz ni control del juego.
+ *
+ * @author Juan
+ * @version 1.0
+ */
+public class Jugador implements Serializable {
+
+    private static final long serialVersionUID = 1L;
+
     private String nombre;
     private int puntaje;
     private int intentos;
-    private int embocadasExitosas;
 
     /**
-     * Constructor del jugador.
-     * Inicializa las estadísticas en cero.
-     * 
-     * @param codigo identificador único del jugador
-     * @param nombre nombre del jugador
+     * Constructor vacío.
      */
-    public Jugador(String codigo, String nombre) {
-        this.codigo = codigo;
-        this.nombre = nombre;
+    public Jugador() {
         this.puntaje = 0;
         this.intentos = 0;
-        this.embocadasExitosas = 0;
     }
 
     /**
-     * Registra un intento del jugador con el tipo de embocada obtenido.
-     * Actualiza puntaje, intentos y embocadas exitosas.
-     * 
-     * @param tipo tipo de embocada realizada
+     * Constructor con nombre.
+     *
+     * @param nombre nombre del jugador
      */
-    public void registrarIntento(TipoEmbocada tipo) {
+    public Jugador(String nombre) {
+        this.nombre = nombre;
+        this.puntaje = 0;
+        this.intentos = 0;
+    }
 
-        intentos++;
+    // ================= LÓGICA DEL MODELO =================
 
-        int puntosObtenidos = tipo.getPuntos();
-        puntaje += puntosObtenidos;
+    /**
+     * Suma puntos al jugador.
+     *
+     * @param puntos cantidad de puntos a agregar
+     */
+    public void sumarPuntos(int puntos) {
+        this.puntaje += puntos;
+    }
 
-        if (puntosObtenidos > 0) {
-            embocadasExitosas++;
-        }
+    /**
+     * Incrementa el número de intentos.
+     */
+    public void incrementarIntentos() {
+        this.intentos++;
     }
 
     /**
      * Reinicia las estadísticas del jugador.
      */
     public void reiniciarEstadisticas() {
-        puntaje = 0;
-        intentos = 0;
-        embocadasExitosas = 0;
+        this.puntaje = 0;
+        this.intentos = 0;
     }
 
-    // =====================
-    // Getters
-    // =====================
-
-    public String getCodigo() {
-        return codigo;
-    }
+    // ================= GETTERS Y SETTERS =================
 
     public String getNombre() {
         return nombre;
+    }
+
+    public void setNombre(String nombre) {
+        this.nombre = nombre;
     }
 
     public int getPuntaje() {
         return puntaje;
     }
 
+    public void setPuntaje(int puntaje) {
+        this.puntaje = puntaje;
+    }
+
     public int getIntentos() {
         return intentos;
     }
 
-    public int getEmbocadasExitosas() {
-        return embocadasExitosas;
+    public void setIntentos(int intentos) {
+        this.intentos = intentos;
+    }
+
+    @Override
+    public String toString() {
+        return "Jugador: " + nombre +
+               " | Puntaje: " + puntaje +
+               " | Intentos: " + intentos;
     }
 }

@@ -233,10 +233,7 @@ public class Vista extends javax.swing.JFrame {
         return jPanelJuego;
     }
 
-    // ================= MAIN =================
-    public static void main(String[] args) {
-        new Vista();
-    }
+ 
 
     // Variables declaration - do not modify//GEN-BEGIN:variables
     private javax.swing.JButton jButtonCargar;
