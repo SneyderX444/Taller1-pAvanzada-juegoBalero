@@ -9,36 +9,52 @@ import java.util.List;
 import javax.swing.*;
 import javax.swing.filechooser.FileNameExtensionFilter;
 
+/**
+ * Controlador Principal del Sistema (Mediador).
+ * Coordina la comunicación entre la Vista y el Modelo, gestionando el flujo
+ * del torneo, la persistencia de resultados y los requisitos de interfaz.
+ * * @author Juan
+ * @version 3.0
+ */
 public class ControlPrincipal {
 
     private final VistaPrincipal vista;
     private final GestionConfiguracion gestionConfig;
-    private Juego juego; // Variable central del modelo
+    private final ResultadosRAF historicoDAO;
+    private Juego juego;
     private Timer cronometro;
     private int tiempoRestante;
 
+    /**
+     * Inicializa los componentes base y muestra los créditos iniciales.
+     */
     public ControlPrincipal() {
         this.vista = new VistaPrincipal();
         this.gestionConfig = new GestionConfiguracion();
+        this.historicoDAO = new ResultadosRAF();
 
         asignarEventos();
         cargarIntegrantesAlInicio();
         this.vista.setVisible(true);
     }
 
+    /**
+     * Vincula las acciones de los botones de la vista con los métodos del controlador.
+     */
     private void asignarEventos() {
-        // Ambos botones en la VistaPrincipal apuntan ahora a la misma lógica de inicio
         vista.getBtnCargar().addActionListener(e -> menuCargarEIniciar());
         vista.getPanelJuego().getBtnLanzar().addActionListener(e -> procesoLanzamiento());
     }
 
+    /**
+     * Gestiona la carga del archivo .properties y la transición a la pantalla de juego.
+     */
     private void menuCargarEIniciar() {
         JFileChooser chooser = new JFileChooser();
         chooser.setFileFilter(new FileNameExtensionFilter("Configuración (.properties)", "properties"));
 
         if (chooser.showOpenDialog(vista) == JFileChooser.APPROVE_OPTION) {
             try {
-                // 1. Cargar archivo
                 List<Equipo> cargados = gestionConfig.leerArchivoConfiguracion(chooser.getSelectedFile().getAbsolutePath());
                 
                 if (cargados.isEmpty()) {
@@ -46,24 +62,25 @@ public class ControlPrincipal {
                     return;
                 }
 
-                // 2. Inicializar lógica de Juego
                 int tiempo = Integer.parseInt(vista.getTextFieldTiempo().getText());
                 this.juego = new Juego(cargados, tiempo);
 
-                // 3. Sincronizar nombres y cambiar pantalla
                 actualizarInterfazNombres();
                 vista.mostrarPanel("JUEGO"); 
-                
-                // 4. Arrancar el primer turno
                 prepararTurno();
 
-                JOptionPane.showMessageDialog(vista, "¡Juego Iniciado!");
+                JOptionPane.showMessageDialog(vista, "¡Torneo Iniciado!");
+            } catch (NumberFormatException nfe) {
+                mostrarError("El tiempo debe ser un valor numérico.");
             } catch (Exception ex) {
                 mostrarError("Error al iniciar: " + ex.getMessage());
             }
         }
     }
 
+    /**
+     * Sincroniza los nombres de equipos y jugadores desde el modelo a la vista.
+     */
     private void actualizarInterfazNombres() {
         List<Equipo> eqs = juego.getEquipos();
         for (int i = 0; i < eqs.size(); i++) {
@@ -78,6 +95,9 @@ public class ControlPrincipal {
         }
     }
 
+    /**
+     * Ejecuta la lógica de lanzamiento, actualiza puntos y muestra el resultado.
+     */
     private void procesoLanzamiento() {
         if (juego == null) return;
 
@@ -88,23 +108,28 @@ public class ControlPrincipal {
         int jIdx = juego.getIndiceJugadorActual();
         Jugador j = juego.getJugadorActual();
 
-        // Actualización visual
         PanelJugador pnl = vista.getPanelJuego().getEquipo(eIdx).getPanelJugador(jIdx);
         pnl.actualizarDatos(j.getPuntos(), j.getIntentos());
         
         vista.getPanelJuego().setMensaje("Resultado: " + result.getDescripcion() + " (+" + result.getPuntos() + " pts)");
     }
 
+    /**
+     * Configura el estado visual para el nuevo turno y reinicia el cronómetro.
+     */
     private void prepararTurno() {
         int eIdx = juego.getIndiceEquipoActual();
         Jugador j = juego.getJugadorActual();
 
-        // Aplicar Literal g: resaltar equipo activo
         actualizarFocoVisual(eIdx);
         vista.getPanelJuego().setMensaje("Turno actual: " + j.getNombre());
         gestionarCronometro(juego.getTiempoPorJugador());
     }
 
+    /**
+     * Controla el tiempo de cada turno. Al agotarse, avanza automáticamente al siguiente jugador.
+     * @param seg Segundos de duración del turno.
+     */
     private void gestionarCronometro(int seg) {
         if (cronometro != null) cronometro.stop();
         this.tiempoRestante = seg;
@@ -120,26 +145,70 @@ public class ControlPrincipal {
         cronometro.start();
     }
 
+    /**
+     * Cambia el turno. Si no hay más jugadores, finaliza el juego y procesa al ganador.
+     */
     private void avanzarTurno() {
         juego.siguienteJugador();
         if (juego.juegoTerminado()) {
             cronometro.stop();
-            JOptionPane.showMessageDialog(vista, "¡Juego Terminado!");
-            vista.mostrarPanel("MENU");
+            procesarFinalizacion();
         } else {
             prepararTurno();
         }
     }
 
+    /**
+     * Calcula el ganador, consulta el histórico en el archivo RAF y muestra los resultados finales.
+     * Requisito: Mostrar cuántas veces ha ganado el equipo anteriormente.
+     */
+    private void procesarFinalizacion() {
+        List<Equipo> lista = juego.getEquipos();
+        Equipo ganador = lista.get(0);
+        
+        // Determinar ganador
+        for (Equipo eq : lista) {
+            eq.calcularPuntajeTotal();
+            if (eq.getPuntajeTotal() > ganador.getPuntajeTotal()) {
+                ganador = eq;
+            }
+        }
+
+        // Consultar y guardar en RAF (Acceso Aleatorio)
+        int victoriasPrevias = historicoDAO.obtenerVictoriasAnteriores(ganador.getNombre());
+        historicoDAO.guardarResultado(ganador.getNombre(), ganador.getPuntajeTotal());
+
+        // Construcción del mensaje final
+        StringBuilder sb = new StringBuilder();
+        sb.append("🏆 TORNEO FINALIZADO 🏆\n\n");
+        sb.append("Ganador: ").append(ganador.getNombre()).append("\n");
+        sb.append("Puntaje: ").append(ganador.getPuntajeTotal()).append(" pts\n");
+        sb.append("---------------------------------\n");
+        
+        if (victoriasPrevias > 0) {
+            sb.append("⭐ ¡Este equipo ha ganado ").append(victoriasPrevias)
+              .append(victoriasPrevias == 1 ? " vez" : " veces").append(" anteriormente!");
+        } else {
+            sb.append("🆕 ¡Esta es la primera victoria del equipo!");
+        }
+
+        JOptionPane.showMessageDialog(vista, sb.toString(), "Resultados Históricos", 1);
+        vista.mostrarPanel("MENU");
+    }
+
+    /**
+     * Aplica el efecto de difuminado (Literal g) resaltando solo al equipo activo.
+     */
     private void actualizarFocoVisual(int activo) {
         for (int i = 0; i < 3; i++) {
-            // Llama al método que creamos en PanelEquipo
             vista.getPanelJuego().getEquipo(i).setTransparencia(i == activo ? 1.0f : 0.3f);
         }
     }
 
+    /**
+     * Carga y muestra los créditos desde el archivo de texto al iniciar la app.
+     */
     private void cargarIntegrantesAlInicio() {
-        // Ruta relativa estándar para NetBeans
         File f = new File("src/Docs/Integrantes/Integrantes.txt");
         if(!f.exists()) return;
         
@@ -148,7 +217,7 @@ public class ControlPrincipal {
             String s;
             while ((s = br.readLine()) != null) sb.append("- ").append(s).append("\n");
             JOptionPane.showMessageDialog(vista, sb.toString(), "Créditos", 1);
-        } catch (IOException e) { }
+        } catch (IOException e) { /* Falla silenciosa por requerimiento */ }
     }
 
     private void mostrarError(String m) {
