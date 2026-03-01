@@ -26,9 +26,9 @@ public class ControlPrincipal {
     private Vista vista;
 
     // ===== Modelos =====
-    private ArchivoPropiedades archivoPropiedades;
+    private GestionConfiguracion gestionConfig; // En lugar de ArchivoPropiedades
+    private ResultadosRAF modeloResultados;      // En lugar de Resultados
     private PersistenciaEquipos persistencia;
-    private Resultados modeloResultados;
 
     // ===== Controladores =====
     private ControlEquipo controlEquipo;
@@ -54,9 +54,9 @@ public class ControlPrincipal {
         vista = new Vista();
 
         // Modelos
-        archivoPropiedades = new ArchivoPropiedades();
-        persistencia = new PersistenciaEquipos("equipos_jugadores.persistence");
-        modeloResultados = new Resultados();
+        this.gestionConfig = new GestionConfiguracion();
+        this.persistencia = new PersistenciaEquipos(); // Quita el String de adentro
+        this.modeloResultados = new ResultadosRAF();
 
         // Controladores de modelos
         controlEquipo = new ControlEquipo();
@@ -117,7 +117,7 @@ public class ControlPrincipal {
             return;
         }
 
-        controlJuego.iniciarJuego(equipos);
+        controlJuego.iniciarJuego(equipos, 60);
 
         // Cambiar a pantalla de juego
         vista.mostrarPanel("Juego");

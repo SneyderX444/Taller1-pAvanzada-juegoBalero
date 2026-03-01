@@ -93,4 +93,8 @@ public class ControlEquipo {
             equipo.reiniciarPuntajes();
         }
     }
+    
+     public void setEquipos(List<Equipo> equipos) {
+    this.equipos = equipos;
+    }
 }

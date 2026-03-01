@@ -1,73 +1,44 @@
 package Controlador;
 
 import Modelo.Equipo;
-import Modelo.Resultados;
+import Modelo.ResultadosRAF;
 import java.util.List;
 
 /**
- * Controlador encargado de la gestión de resultados del juego.
- *
- * Responsabilidades:
- * - Determinar el equipo ganador
- * - Guardar el resultado en el archivo persistente
- * - Consultar cuántas veces ha ganado un equipo
- * - Obtener el historial de resultados
- *
- * Este controlador NO maneja archivos directamente.
- * Toda la persistencia se delega al modelo Resultados.
- *
+ * Controlador de resultados con lógica de desempate.
  * @author Juan
- * @version 1.0
  */
 public class ControlResultados {
+    private ResultadosRAF modeloResultados;
 
-    private Resultados modeloResultados;
+    public ControlResultados(ResultadosRAF modelo) {
+    this.modeloResultados = modelo;
+  }
 
-    /**
-     * Constructor
-     */
-    public ControlResultados() {
-        modeloResultados = new Resultados();
-    }
-
-    /**
-     * Determina el equipo ganador (mayor puntaje).
-     */
     public Equipo determinarGanador(List<Equipo> equipos) {
-        Equipo ganador = null;
-        int mayorPuntaje = -1;
+        Equipo ganador = equipos.get(0);
 
-        for (Equipo equipo : equipos) {
-            if (equipo.getPuntajeTotal() > mayorPuntaje) {
-                mayorPuntaje = equipo.getPuntajeTotal();
-                ganador = equipo;
+        for (int i = 1; i < equipos.size(); i++) {
+            Equipo actual = equipos.get(i);
+            
+            if (actual.getPuntajeTotal() > ganador.getPuntajeTotal()) {
+                ganador = actual;
+            } 
+            else if (actual.getPuntajeTotal() == ganador.getPuntajeTotal()) {
+                // CRITERIO DESEMPATE: Suma de intentos efectivos de sus jugadores
+                if (obtenerEmbocadasTotales(actual) > obtenerEmbocadasTotales(ganador)) {
+                    ganador = actual;
+                }
             }
         }
-
         return ganador;
     }
 
-    /**
-     * Guarda el resultado del equipo ganador.
-     */
-    public void guardarResultado(Equipo equipoGanador) {
-        modeloResultados.guardarResultado(
-                equipoGanador.getNombre(),
-                equipoGanador.getPuntajeTotal()
-        );
+    private int obtenerEmbocadasTotales(Equipo e) {
+        return e.getJugadores().stream().mapToInt(j -> j.getIntentosEfectivos()).sum();
     }
 
-    /**
-     * Obtiene cuántas veces ha ganado un equipo.
-     */
-    public int obtenerVictorias(String nombreEquipo) {
-        return modeloResultados.contarVictorias(nombreEquipo);
-    }
-
-    /**
-     * Obtiene el historial completo.
-     */
-    public List<String> obtenerHistorial() {
-        return modeloResultados.leerResultados();
+    public void registrarEnHistorial(Equipo e) {
+        persistenciaRAF.guardarGanador(e.getNombre(), e.getPuntajeTotal());
     }
 }
