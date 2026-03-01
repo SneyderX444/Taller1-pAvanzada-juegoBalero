@@ -3,15 +3,18 @@ package Vista;
 import javax.swing.*;
 import java.awt.*;
 
+/**
+ * Contenedor de un equipo que gestiona el efecto de difuminado (Literal g).
+ */
 public class PanelEquipo extends JPanel {
-    private float alpha = 1.0f; // 1.0 = opaco, 0.3 = transparente
-    private PanelJugador[] jugadores;
+    private final PanelJugador[] jugadores;
+    private float alpha = 1.0f; // 1.0f = Activo, 0.4f = Difuminado
 
     public PanelEquipo(String nombreEquipo, String[] nombres) {
         setLayout(new GridLayout(1, 3, 10, 0));
+        setOpaque(false); // Necesario para que el AlphaComposite funcione correctamente
         setBorder(BorderFactory.createTitledBorder(
-            BorderFactory.createLineBorder(Color.GRAY), nombreEquipo));
-        setOpaque(false);
+                BorderFactory.createLineBorder(Color.LIGHT_GRAY), nombreEquipo));
 
         jugadores = new PanelJugador[3];
         for (int i = 0; i < 3; i++) {
@@ -20,27 +23,33 @@ public class PanelEquipo extends JPanel {
         }
     }
 
-    // Método clave para el Requisito de Difuminado
-    public void setActivo(boolean activo) {
+    /**
+     * Define si el equipo está activo o difuminado.
+     * @param activo true para opacidad total, false para transparencia.
+     */
+    public void setEstadoVisual(boolean activo) {
         this.alpha = activo ? 1.0f : 0.4f;
         repaint();
     }
 
     @Override
-    protected void paintComponent(Graphics g) {
-    java.awt.Graphics2D g2 = (java.awt.Graphics2D) g.create();
-    g2.setComposite(java.awt.AlphaComposite.getInstance(java.awt.AlphaComposite.SRC_OVER, alpha));
-    super.paintComponent(g2);
-    g2.dispose();
+    protected void paintChildren(Graphics g) {
+        Graphics2D g2 = (Graphics2D) g.create();
+        // Aplicación del requisito de transparencia/difuminado
+        g2.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER, alpha));
+        super.paintChildren(g2);
+        g2.dispose();
     }
 
     public PanelJugador getPanelJugador(int i) { return jugadores[i]; }
-    
-    // Dentro de PanelEquipo.java
-public void setTransparencia(float alpha) {
+    public void setTransparencia(float alpha) {
     this.alpha = alpha;
-    this.repaint(); // Obligatorio para que Java vuelva a pintar el panel con el nuevo brillo
+    repaint();
 }
 
-
+public void setNombreEquipo(String nombre) {
+    setBorder(BorderFactory.createTitledBorder(
+            BorderFactory.createLineBorder(Color.LIGHT_GRAY), nombre));
+}
+    
 }

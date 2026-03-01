@@ -5,128 +5,66 @@ import java.util.List;
 import java.util.Random;
 
 /**
- * Modelo que representa el estado del juego del Balero.
- *
- * Responsabilidades:
- * - Controlar equipos y jugadores actuales
- * - Administrar intentos
- * - Generar embocadas aleatorias
- * - Registrar puntajes
- *
- * Pertenece a la capa Modelo (MVC).
- *
- * No contiene lógica de interfaz ni controladores.
- *
- * @author Juan
- * @version 1.1
+ * Motor central de lógica del juego.
+ * Controla el flujo de turnos, lanzamientos y estados de finalización.
  */
 public class Juego implements Serializable {
-
     private static final long serialVersionUID = 1L;
 
-    private List<Equipo> equipos;
+    private final List<Equipo> equipos;
     private int indiceEquipoActual;
     private int indiceJugadorActual;
+    private final int tiempoPorJugador;
+    private final Random random;
 
-    private int tiempoPorJugador;
-    private int intentosJugador;
-
-    private Random random;
-
-    /**
-     * Constructor del modelo del juego.
-     * 
-     * @param equipos lista de equipos participantes
-     * @param tiempoPorJugador tiempo asignado a cada jugador
-     */
     public Juego(List<Equipo> equipos, int tiempoPorJugador) {
         this.equipos = equipos;
         this.tiempoPorJugador = tiempoPorJugador;
         this.indiceEquipoActual = 0;
         this.indiceJugadorActual = 0;
-        this.intentosJugador = 0;
         this.random = new Random();
     }
 
-    // ================= ESTADO ACTUAL =================
-
-    public Equipo getEquipoActual() {
-        return equipos.get(indiceEquipoActual);
+    /**
+     * Selecciona una embocada al azar del Enum TipoEmbocada.
+     */
+    public TipoEmbocada lanzarBalero() {
+        TipoEmbocada[] opciones = TipoEmbocada.values();
+        return opciones[random.nextInt(opciones.length)];
     }
-
-    public Jugador getJugadorActual() {
-        return getEquipoActual().getJugadores().get(indiceJugadorActual);
-    }
-
-    public int getIntentosJugador() {
-        return intentosJugador;
-    }
-
-    public int getTiempoPorJugador() {
-        return tiempoPorJugador;
-    }
-
-    public List<Equipo> getEquipos() {
-        return equipos;
-    }
-
-    // ================= TURNOS =================
 
     /**
-     * Avanza al siguiente jugador.
-     * Si se terminan los jugadores del equipo,
-     * pasa al siguiente equipo.
+     * Registra el resultado en el jugador que tiene el turno actual.
+     */
+    public void registrarResultado(TipoEmbocada embocada) {
+        Jugador actual = getJugadorActual();
+        actual.sumarPuntos(embocada.getPuntos());
+        actual.incrementarIntentos();
+        if (embocada != TipoEmbocada.NINGUNA) {
+            actual.registrarEmbocadaEfectiva();
+        }
+    }
+
+    /**
+     * Gestiona el avance de los índices de turno.
      */
     public void siguienteJugador() {
         indiceJugadorActual++;
-
         if (indiceJugadorActual >= getEquipoActual().getJugadores().size()) {
             indiceJugadorActual = 0;
             indiceEquipoActual++;
         }
-
-        intentosJugador = 0;
     }
 
-    /**
-     * Indica si el juego ha finalizado.
-     */
     public boolean juegoTerminado() {
         return indiceEquipoActual >= equipos.size();
     }
 
-    // ================= LÓGICA DEL JUEGO =================
-
-    /**
-     * Genera una embocada aleatoria.
-     * Selecciona un valor aleatorio del enum TipoEmbocada.
-     *
-     * @return TipoEmbocada obtenida
-     */
-    public TipoEmbocada lanzarBalero() {
-        TipoEmbocada[] valores = TipoEmbocada.values();
-        int indice = random.nextInt(valores.length);
-        return valores[indice];
-    }
-
-    /**
-     * Registra el resultado del lanzamiento
-     * sumando los puntos al jugador actual.
-     *
-     * @param embocada tipo de embocada obtenida
-     */
-    public void registrarResultado(TipoEmbocada embocada) {
-        Jugador jugador = getJugadorActual();
-        jugador.sumarPuntos(embocada.getPuntos());
-        intentosJugador++;
-    }
-
-    /**
-     * Calcula el puntaje total de todos los equipos.
-     */
-    public void calcularPuntajesEquipos() {
-        for (Equipo equipo : equipos) {
-            equipo.calcularPuntajeTotal();
-        }
-    }
+    // Getters de estado actual
+    public Equipo getEquipoActual() { return equipos.get(indiceEquipoActual); }
+    public Jugador getJugadorActual() { return getEquipoActual().getJugadores().get(indiceJugadorActual); }
+    public int getIndiceEquipoActual() { return indiceEquipoActual; }
+    public int getIndiceJugadorActual() { return indiceJugadorActual; }
+    public int getTiempoPorJugador() { return tiempoPorJugador; }
+    public List<Equipo> getEquipos() { return equipos; }
 }

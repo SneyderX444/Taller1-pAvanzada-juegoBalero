@@ -2,39 +2,20 @@ package Modelo;
 
 import java.io.*;
 
-/**
- * Persistencia histórica usando RandomAccessFile (RAF).
- * Ubicación: Specs/data/historico.dat (Requisito literal i).
- * @author Juan
- */
 public class ResultadosRAF {
-    private final String RUTA = "Specs/data/historico.dat";
-    private final int TAM_NOMBRE = 40; // Tamaño fijo en bytes para el nombre
+    private static final String RUTA = "Specs/data/historico.dat";
 
     public void guardarResultado(String nombreEquipo, int puntos) {
-        File dir = new File("Specs/data");
-        if (!dir.exists()) dir.mkdirs();
-
+        new File("Specs/data").mkdirs();
         try (RandomAccessFile raf = new RandomAccessFile(RUTA, "rw")) {
             raf.seek(raf.length());
-            // Escribir nombre ajustado a 20 caracteres (UTF usa 2 bytes por char + 2 de control)
-            String nombreAjustado = String.format("%-20s", nombreEquipo);
+            // Escribir nombre con longitud fija de 20 caracteres
+            String nombreAjustado = String.format("%-20s", (nombreEquipo.length() > 20) ? 
+                                   nombreEquipo.substring(0, 20) : nombreEquipo);
             raf.writeUTF(nombreAjustado);
             raf.writeInt(puntos);
         } catch (IOException e) {
-            // No usar System.out ni JOptionPane aquí (Requisito literal i)
+            // Silencio en consola según requerimiento literal i
         }
-    }
-
-    public int obtenerVictoriasAnteriores(String nombreEquipo) {
-        int conteo = 0;
-        try (RandomAccessFile raf = new RandomAccessFile(RUTA, "r")) {
-            while (raf.getFilePointer() < raf.length()) {
-                String nombre = raf.readUTF().trim();
-                raf.readInt();
-                if (nombre.equalsIgnoreCase(nombreEquipo)) conteo++;
-            }
-        } catch (IOException e) { }
-        return conteo;
     }
 }

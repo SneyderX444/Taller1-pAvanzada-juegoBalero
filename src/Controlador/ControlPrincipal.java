@@ -1,6 +1,7 @@
 package Controlador;
 
 import Modelo.*;
+import Vista.PanelEquipo;
 import Vista.PanelJugador;
 import Vista.VistaPrincipal;
 import java.io.*;
@@ -8,28 +9,17 @@ import java.util.List;
 import javax.swing.*;
 import javax.swing.filechooser.FileNameExtensionFilter;
 
-/**
- * Orquestador Principal del Sistema.
- * Único responsable de coordinar la Vista con los diferentes controladores de lógica.
- * Aplica el principio de Mediador para evitar que los modelos conozcan la vista.
- * * @author Juan
- * @version 2.2
- */
 public class ControlPrincipal {
 
     private final VistaPrincipal vista;
     private final GestionConfiguracion gestionConfig;
-    private final ControlEquipo controlEquipo;
-    private final ControlJuego controlJuego;
-    
+    private Juego juego; // Variable central del modelo
     private Timer cronometro;
     private int tiempoRestante;
 
     public ControlPrincipal() {
         this.vista = new VistaPrincipal();
         this.gestionConfig = new GestionConfiguracion();
-        this.controlEquipo = new ControlEquipo();
-        this.controlJuego = new ControlJuego();
 
         asignarEventos();
         cargarIntegrantesAlInicio();
@@ -37,64 +27,82 @@ public class ControlPrincipal {
     }
 
     private void asignarEventos() {
-        vista.getBtnCargar().addActionListener(e -> menuCargarArchivo());
-        vista.getBtnIniciar().addActionListener(e -> menuIniciarPartida());
+        // Ambos botones en la VistaPrincipal apuntan ahora a la misma lógica de inicio
+        vista.getBtnCargar().addActionListener(e -> menuCargarEIniciar());
         vista.getPanelJuego().getBtnLanzar().addActionListener(e -> procesoLanzamiento());
     }
 
-    private void menuCargarArchivo() {
+    private void menuCargarEIniciar() {
         JFileChooser chooser = new JFileChooser();
         chooser.setFileFilter(new FileNameExtensionFilter("Configuración (.properties)", "properties"));
 
         if (chooser.showOpenDialog(vista) == JFileChooser.APPROVE_OPTION) {
             try {
+                // 1. Cargar archivo
                 List<Equipo> cargados = gestionConfig.leerArchivoConfiguracion(chooser.getSelectedFile().getAbsolutePath());
-                controlEquipo.setEquipos(cargados);
-                sincronizarNombresVista(cargados);
-                actualizarFocoVisual(-1); // Estado difuminado inicial
-                JOptionPane.showMessageDialog(vista, "Configuración cargada con éxito.");
-            } catch (IOException ex) {
-                mostrarError("Error al procesar archivo: " + ex.getMessage());
+                
+                if (cargados.isEmpty()) {
+                    mostrarError("El archivo no contiene equipos válidos.");
+                    return;
+                }
+
+                // 2. Inicializar lógica de Juego
+                int tiempo = Integer.parseInt(vista.getTextFieldTiempo().getText());
+                this.juego = new Juego(cargados, tiempo);
+
+                // 3. Sincronizar nombres y cambiar pantalla
+                actualizarInterfazNombres();
+                vista.mostrarPanel("JUEGO"); 
+                
+                // 4. Arrancar el primer turno
+                prepararTurno();
+
+                JOptionPane.showMessageDialog(vista, "¡Juego Iniciado!");
+            } catch (Exception ex) {
+                mostrarError("Error al iniciar: " + ex.getMessage());
             }
         }
     }
 
-    private void menuIniciarPartida() {
-        if (controlEquipo.getEquipos().isEmpty()) {
-            mostrarError("Primero debe cargar un archivo de equipos.");
-            return;
-        }
-        try {
-            int t = Integer.parseInt(vista.getTextFieldTiempo().getText());
-            controlJuego.iniciarJuego(controlEquipo.getEquipos(), t);
-            vista.mostrarPanel("Juego");
-            prepararTurno();
-        } catch (NumberFormatException ex) {
-            mostrarError("El tiempo debe ser un valor numérico.");
+    private void actualizarInterfazNombres() {
+        List<Equipo> eqs = juego.getEquipos();
+        for (int i = 0; i < eqs.size(); i++) {
+            Equipo eq = eqs.get(i);
+            PanelEquipo pnlEq = vista.getPanelJuego().getEquipo(i);
+            pnlEq.setNombreEquipo(eq.getNombre());
+            
+            for (int j = 0; j < eq.getJugadores().size(); j++) {
+                String nombreJug = eq.getJugadores().get(j).getNombre();
+                pnlEq.getPanelJugador(j).actualizarNombre(nombreJug);
+            }
         }
     }
 
     private void procesoLanzamiento() {
-        TipoEmbocada result = controlJuego.ejecutarLanzamiento();
-        
-        int eIdx = controlJuego.getIndiceEquipoActual();
-        int jIdx = controlJuego.getIndiceJugadorActual();
-        Jugador j = controlJuego.getJugadorActivo();
+        if (juego == null) return;
 
-        // Actualización directa al componente visual del jugador actual
+        TipoEmbocada result = juego.lanzarBalero();
+        juego.registrarResultado(result);
+        
+        int eIdx = juego.getIndiceEquipoActual();
+        int jIdx = juego.getIndiceJugadorActual();
+        Jugador j = juego.getJugadorActual();
+
+        // Actualización visual
         PanelJugador pnl = vista.getPanelJuego().getEquipo(eIdx).getPanelJugador(jIdx);
         pnl.actualizarDatos(j.getPuntos(), j.getIntentos());
         
-        vista.getPanelJuego().setMensaje("Resultado: " + result + " (+" + result.getPuntos() + " pts)");
+        vista.getPanelJuego().setMensaje("Resultado: " + result.getDescripcion() + " (+" + result.getPuntos() + " pts)");
     }
 
     private void prepararTurno() {
-        int eIdx = controlJuego.getIndiceEquipoActual();
-        Jugador j = controlJuego.getJugadorActivo();
+        int eIdx = juego.getIndiceEquipoActual();
+        Jugador j = juego.getJugadorActual();
 
+        // Aplicar Literal g: resaltar equipo activo
         actualizarFocoVisual(eIdx);
         vista.getPanelJuego().setMensaje("Turno actual: " + j.getNombre());
-        gestionarCronometro(controlJuego.getTiempoPorJugador());
+        gestionarCronometro(juego.getTiempoPorJugador());
     }
 
     private void gestionarCronometro(int seg) {
@@ -103,7 +111,7 @@ public class ControlPrincipal {
         
         cronometro = new Timer(1000, e -> {
             tiempoRestante--;
-            vista.getPanelJuego().getLblTiempo().setText("Tiempo: " + tiempoRestante + "s");
+            vista.getPanelJuego().getLblTiempo().setText(tiempoRestante + "s");
             if (tiempoRestante <= 0) {
                 cronometro.stop();
                 avanzarTurno();
@@ -113,10 +121,11 @@ public class ControlPrincipal {
     }
 
     private void avanzarTurno() {
-        controlJuego.pasarAlSiguienteTurno();
-        if (controlJuego.esFinDelJuego()) {
+        juego.siguienteJugador();
+        if (juego.juegoTerminado()) {
             cronometro.stop();
             JOptionPane.showMessageDialog(vista, "¡Juego Terminado!");
+            vista.mostrarPanel("MENU");
         } else {
             prepararTurno();
         }
@@ -124,32 +133,25 @@ public class ControlPrincipal {
 
     private void actualizarFocoVisual(int activo) {
         for (int i = 0; i < 3; i++) {
+            // Llama al método que creamos en PanelEquipo
             vista.getPanelJuego().getEquipo(i).setTransparencia(i == activo ? 1.0f : 0.3f);
         }
     }
 
-    private void sincronizarNombresVista(List<Equipo> lista) {
-        for (int i = 0; i < Math.min(lista.size(), 3); i++) {
-            Equipo eq = lista.get(i);
-            vista.getPanelJuego().getEquipo(i).setNombreEquipo(eq.getNombre());
-            for (int j = 0; j < 3; j++) {
-                vista.getPanelJuego().getEquipo(i).getPanelJugador(j)
-                     .actualizarNombre(eq.getJugadores().get(j).getNombre());
-            }
-        }
-    }
-
     private void cargarIntegrantesAlInicio() {
+        // Ruta relativa estándar para NetBeans
         File f = new File("src/Docs/Integrantes/Integrantes.txt");
+        if(!f.exists()) return;
+        
         try (BufferedReader br = new BufferedReader(new FileReader(f))) {
             StringBuilder sb = new StringBuilder("EQUIPO DE DESARROLLO:\n");
             String s;
             while ((s = br.readLine()) != null) sb.append("- ").append(s).append("\n");
             JOptionPane.showMessageDialog(vista, sb.toString(), "Créditos", 1);
-        } catch (IOException e) { /* Falla silenciosa según Literal i */ }
+        } catch (IOException e) { }
     }
 
     private void mostrarError(String m) {
-        JOptionPane.showMessageDialog(vista, m, "Error de Aplicación", 0);
+        JOptionPane.showMessageDialog(vista, m, "Error", 0);
     }
 }

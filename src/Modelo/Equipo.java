@@ -5,116 +5,46 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Represents a team in the Balero game.
- *
- * Responsibilities:
- * - Store team information
- * - Manage its players
- * - Accumulate team score
- * - Store historical wins
- *
- * Part of the Model layer (MVC).
- *
- * @author Juan
- * @version 1.0
+ * Representa un equipo en el torneo.
+ * Responsabilidad: Gestionar el grupo de jugadores y el puntaje acumulado del equipo.
  */
 public class Equipo implements Serializable {
-
     private static final long serialVersionUID = 1L;
 
     private String nombre;
     private String proyectoCurricular;
     private List<Jugador> jugadores;
     private int puntajeTotal;
-    private int partidasGanadas;
 
-    /**
-     * Constructor vacío.
-     */
-    public Equipo() {
-        this.jugadores = new ArrayList<>();
-    }
-
-    /**
-     * Constructor principal.
-     */
     public Equipo(String nombre, String proyectoCurricular) {
         this.nombre = nombre;
         this.proyectoCurricular = proyectoCurricular;
         this.jugadores = new ArrayList<>();
-        this.puntajeTotal = 0;
-        this.partidasGanadas = 0;
     }
 
-    // ================= MÉTODOS DE NEGOCIO =================
-
-    /**
-     * Agrega un jugador al equipo.
-     */
     public void agregarJugador(Jugador jugador) {
-        jugadores.add(jugador);
+        if (jugadores.size() < 3) {
+            jugadores.add(jugador);
+        }
     }
 
     /**
-     * Calcula el puntaje total del equipo sumando
-     * el puntaje de todos sus jugadores.
+     * Calcula el puntaje total sumando el de cada jugador usando Streams.
      */
     public void calcularPuntajeTotal() {
-        puntajeTotal = 0;
-        for (Jugador j : jugadores) {
-            puntajeTotal += j.getPuntaje();
-        }
+        this.puntajeTotal = jugadores.stream()
+                                     .mapToInt(Jugador::getPuntaje)
+                                     .sum();
     }
 
-    /**
-     * Incrementa el número de partidas ganadas.
-     */
-    public void incrementarVictorias() {
-        partidasGanadas++;
-    }
-
-    /**
-     * Reinicia el puntaje de todos los jugadores.
-     */
     public void reiniciarPuntajes() {
-        puntajeTotal = 0;
-        for (Jugador j : jugadores) {
-            j.setPuntaje(0);
-        }
+        this.puntajeTotal = 0;
+        jugadores.forEach(Jugador::reiniciarEstadisticas);
     }
 
-    // ================= GETTERS Y SETTERS =================
-
-    public String getNombre() {
-        return nombre;
-    }
-    
-
-    public void setNombre(String nombre) {
-        this.nombre = nombre;
-    }
-
-    public String getProyectoCurricular() {
-        return proyectoCurricular;
-    }
-
-    public void setProyectoCurricular(String proyectoCurricular) {
-        this.proyectoCurricular = proyectoCurricular;
-    }
-
-    public List<Jugador> getJugadores() {
-        return jugadores;
-    }
-
-    public int getPuntajeTotal() {
-        return puntajeTotal;
-    }
-
-    public int getPartidasGanadas() {
-        return partidasGanadas;
-    }
-
-    public void setPartidasGanadas(int partidasGanadas) {
-        this.partidasGanadas = partidasGanadas;
-    }
+    // Getters
+    public String getNombre() { return nombre; }
+    public String getProyectoCurricular() { return proyectoCurricular; }
+    public List<Jugador> getJugadores() { return jugadores; }
+    public int getPuntajeTotal() { return puntajeTotal; }
 }

@@ -5,72 +5,70 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Clase del modelo encargada de la persistencia de los equipos del sistema.
- *
- * Responsabilidades:
- * - Guardar los equipos y sus jugadores en un archivo binario
- * - Cargar los equipos desde el archivo
- * - Verificar si el archivo de persistencia existe
- *
- * Archivo utilizado: equipos.persistence
- *
- * Importante:
- * Las clases Equipo y Jugador deben implementar Serializable.
- *
- * Esta clase pertenece a la capa Modelo (MVC).
- *
- * @author Juan
- * @version 2.0
+ * Clase encargada de la persistencia de objetos mediante serialización binaria.
+ * * Responsabilidades:
+ * - Guardar el estado completo de la lista de equipos (incluyendo jugadores).
+ * - Recuperar los datos de sesiones anteriores.
+ * * Pertenece a la capa Modelo (MVC).
+ * * @author Juan
+ * @version 2.1
  */
 public class PersistenciaEquipos {
 
     private static final String RUTA_ARCHIVO = "equipos.persistence";
 
     /**
-     * Guarda la lista de equipos en el archivo de persistencia.
+     * Guarda la lista de equipos en un archivo binario.
+     * Utiliza try-with-resources para asegurar el cierre del flujo.
      *
-     * @param equipos lista de equipos a guardar
-     * @throws IOException si ocurre un error durante la escritura
+     * @param equipos Lista de objetos Equipo a serializar.
+     * @throws IOException Si hay errores de escritura en el disco.
      */
     public void guardarEquipos(List<Equipo> equipos) throws IOException {
-        try (ObjectOutputStream salida =
-                     new ObjectOutputStream(new FileOutputStream(RUTA_ARCHIVO))) {
-
+        try (ObjectOutputStream salida = 
+                new ObjectOutputStream(new FileOutputStream(RUTA_ARCHIVO))) {
             salida.writeObject(equipos);
         }
     }
 
     /**
-     * Carga la lista de equipos desde el archivo de persistencia.
+     * Carga los equipos desde el archivo binario.
+     * Maneja el caso de archivo inexistente devolviendo una lista vacía.
      *
-     * @return lista de equipos almacenados.
-     *         Si el archivo no existe, retorna una lista vacía.
-     * @throws IOException si ocurre un error de lectura
-     * @throws ClassNotFoundException si cambia la estructura de las clases serializadas
+     * @return List de equipos recuperados.
+     * @throws IOException Si hay error de lectura.
+     * @throws ClassNotFoundException Si la estructura de las clases ha cambiado 
+     * y no coincide con el archivo.
      */
     @SuppressWarnings("unchecked")
     public List<Equipo> cargarEquipos() throws IOException, ClassNotFoundException {
-
         File archivo = new File(RUTA_ARCHIVO);
 
         if (!archivo.exists()) {
-            return new ArrayList<>(); // Evita errores si es la primera ejecución
+            return new ArrayList<>();
         }
 
-        try (ObjectInputStream entrada =
-                     new ObjectInputStream(new FileInputStream(archivo))) {
-
+        try (ObjectInputStream entrada = 
+                new ObjectInputStream(new FileInputStream(archivo))) {
+            // Se realiza el cast seguro tras la validación de existencia
             return (List<Equipo>) entrada.readObject();
         }
     }
 
     /**
-     * Verifica si el archivo de persistencia existe.
-     *
-     * @return true si el archivo existe, false en caso contrario
+     * Comprueba si existe un estado guardado previamente.
+     * @return true si el archivo de persistencia se encuentra en la ruta.
      */
     public boolean existeArchivo() {
+        return new File(RUTA_ARCHIVO).exists();
+    }
+    
+    /**
+     * Opcional: Borra el archivo de persistencia si se desea reiniciar el torneo.
+     * @return true si el archivo fue eliminado exitosamente.
+     */
+    public boolean borrarPersistencia() {
         File archivo = new File(RUTA_ARCHIVO);
-        return archivo.exists();
+        return archivo.exists() && archivo.delete();
     }
 }
