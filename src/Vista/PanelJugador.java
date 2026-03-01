@@ -39,6 +39,10 @@ public class PanelJugador extends JPanel {
         add(lblFoto, BorderLayout.CENTER);
         add(panelDatos, BorderLayout.SOUTH);
     }
+    
+    public void actualizarNombre(String nombre) {
+    this.lblNombre.setText(nombre); // lblNombre es el JLabel que definimos antes
+   }
 
     public void actualizarDatos(int puntos, int intentos) {
         lblPuntos.setText("Pts: " + puntos);
