@@ -3,40 +3,50 @@ package Controlador;
 import Modelo.Equipo;
 import Modelo.ResultadosRAF;
 import java.util.List;
+import java.util.Comparator;
 
+/**
+ * Controlador para la gestión de resultados finales y persistencia en archivos.
+ * * @author Juan
+ * @version 2.0
+ */
 public class ControlResultados {
 
-    private ResultadosRAF modeloResultados;
+    private final ResultadosRAF modeloPersistencia;
 
-    // CONSTRUCTOR CORREGIDO
-    public ControlResultados(ResultadosRAF modeloResultados) {
-        this.modeloResultados = modeloResultados;
+    public ControlResultados(ResultadosRAF modelo) {
+        this.modeloPersistencia = modelo;
     }
 
+    /**
+     * Determina el ganador basándose en puntaje total y desempate por intentos.
+     * @param equipos Lista de equipos a comparar.
+     * @return El equipo con mejor desempeño.
+     */
     public Equipo determinarGanador(List<Equipo> equipos) {
         if (equipos == null || equipos.isEmpty()) return null;
-        
-        Equipo ganador = equipos.get(0);
-        for (int i = 1; i < equipos.size(); i++) {
-            Equipo actual = equipos.get(i);
-            if (actual.getPuntajeTotal() > ganador.getPuntajeTotal()) {
-                ganador = actual;
-            } else if (actual.getPuntajeTotal() == ganador.getPuntajeTotal()) {
-                // Lógica de desempate usando el método que causaba error
-                if (obtenerIntentosTotales(actual) > obtenerIntentosTotales(ganador)) {
-                    ganador = actual;
-                }
-            }
-        }
-        return ganador;
+
+        return equipos.stream()
+            .max(Comparator.comparingInt(Equipo::getPuntajeTotal)
+            .thenComparingInt(this::calcularIntentosTotales))
+            .orElse(null);
     }
 
-    private int obtenerIntentosTotales(Equipo e) {
-        // Asegúrate que el método getIntentosEfectivos() exista en Jugador.java
-        return e.getJugadores().stream().mapToInt(j -> j.getIntentosEfectivos()).sum();
+    /**
+     * Sumatoria de intentos de todos los jugadores de un equipo.
+     */
+    private int calcularIntentosTotales(Equipo e) {
+        return e.getJugadores().stream()
+                .mapToInt(j -> j.getIntentos()) 
+                .sum();
     }
-    
-    public void guardarGanador(Equipo e) {
-        modeloResultados.guardarResultado(e.getNombre(), e.getPuntajeTotal());
+
+    /**
+     * Persiste el resultado del ganador en el archivo de acceso aleatorio.
+     */
+    public void registrarResultadoFinal(Equipo e) {
+        if (e != null) {
+            modeloPersistencia.guardarResultado(e.getNombre(), e.getPuntajeTotal());
+        }
     }
 }

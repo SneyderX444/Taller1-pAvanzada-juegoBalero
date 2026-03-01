@@ -28,10 +28,10 @@ public class PanelEquipo extends JPanel {
 
     @Override
     protected void paintComponent(Graphics g) {
-        Graphics2D g2 = (Graphics2D) g.create();
-        g2.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER, alpha));
-        super.paintComponent(g2);
-        g2.dispose();
+    java.awt.Graphics2D g2 = (java.awt.Graphics2D) g.create();
+    g2.setComposite(java.awt.AlphaComposite.getInstance(java.awt.AlphaComposite.SRC_OVER, alpha));
+    super.paintComponent(g2);
+    g2.dispose();
     }
 
     public PanelJugador getPanelJugador(int i) { return jugadores[i]; }
@@ -42,12 +42,5 @@ public void setTransparencia(float alpha) {
     this.repaint(); // Obligatorio para que Java vuelva a pintar el panel con el nuevo brillo
 }
 
-@Override
-protected void paintComponent(java.awt.Graphics g) {
-    java.awt.Graphics2D g2 = (java.awt.Graphics2D) g.create();
-    g2.setComposite(java.awt.AlphaComposite.getInstance(java.awt.AlphaComposite.SRC_OVER, alpha));
-    super.paintComponent(g2);
-    g2.dispose();
-}
 
 }

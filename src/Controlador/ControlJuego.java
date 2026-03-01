@@ -1,92 +1,60 @@
 package Controlador;
 
-import Modelo.Equipo;
-import Modelo.Jugador;
-import Modelo.Juego;
-import Modelo.TipoEmbocada;
-
+import Modelo.*;
 import java.util.List;
 
 /**
- * Controlador encargado del flujo del juego.
- *
- * Responsabilidades:
- * - Inicializar el juego
- * - Ejecutar lanzamientos
- * - Controlar turnos
- * - Verificar finalización
- *
- * Este controlador coordina el ModeloJuego.
- *
- * No contiene lógica de interfaz gráfica.
- *
- * @author Juan
- * @version 1.0
+ * Controlador de flujo y reglas de negocio del juego.
+ * Actúa como mediador entre el orquestador principal y el motor de reglas (Juego).
+ * * @author Juan
+ * @version 2.0
  */
 public class ControlJuego {
 
     private Juego modeloJuego;
 
     /**
-     * Inicializa el juego con los equipos y el tiempo por jugador.
+     * Inicializa el motor de juego. 
+     * @param equipos Lista de equipos participantes.
+     * @param tiempo Tiempo límite por cada turno de jugador.
      */
-    public void iniciarJuego(List<Equipo> equipos, int tiempoPorJugador) {
-        modeloJuego = new Juego(equipos, tiempoPorJugador);
+    public void iniciarJuego(List<Equipo> equipos, int tiempo) {
+        this.modeloJuego = new Juego(equipos, tiempo);
     }
 
-    // ================= ACCIONES DEL JUEGO =================
-
     /**
-     * Realiza un lanzamiento del balero.
-     *
-     * @return TipoEmbocada obtenida
+     * Ejecuta la acción de lanzamiento y registra el resultado en el modelo.
+     * @return El tipo de embocada obtenido aleatoriamente.
      */
-    public TipoEmbocada lanzar() {
+    public TipoEmbocada ejecutarLanzamiento() {
         TipoEmbocada resultado = modeloJuego.lanzarBalero();
         modeloJuego.registrarResultado(resultado);
         return resultado;
     }
 
-    /**
-     * Pasa al siguiente jugador.
-     */
-    public void siguienteTurno() {
+    public void pasarAlSiguienteTurno() {
         modeloJuego.siguienteJugador();
     }
 
-    /**
-     * Indica si el juego ha terminado.
-     */
-    public boolean juegoTerminado() {
-        return modeloJuego.juegoTerminado();
+    public boolean esFinDelJuego() {
+        return (modeloJuego != null) && modeloJuego.juegoTerminado();
     }
 
-    // ================= CONSULTAS =================
-
-    public Equipo getEquipoActual() {
-        return modeloJuego.getEquipoActual();
-    }
-
-    public Jugador getJugadorActual() {
+    // --- Getters de Estado Actual ---
+    
+    public Jugador getJugadorActivo() {
         return modeloJuego.getJugadorActual();
     }
 
-    public int getIntentosActual() {
-        return modeloJuego.getIntentosJugador();
+    public int getIndiceEquipoActual() {
+        return modeloJuego.getIndiceEquipoActual();
+    }
+
+    public int getIndiceJugadorActual() {
+        return modeloJuego.getIndiceJugadorActual();
     }
 
     public int getTiempoPorJugador() {
         return modeloJuego.getTiempoPorJugador();
-    }
-
-    public List<Equipo> getEquipos() {
-        return modeloJuego.getEquipos();
-    }
-
-    /**
-     * Calcula los puntajes finales de los equipos.
-     */
-    public void calcularResultadosFinales() {
-        modeloJuego.calcularPuntajesEquipos();
     }
 }
