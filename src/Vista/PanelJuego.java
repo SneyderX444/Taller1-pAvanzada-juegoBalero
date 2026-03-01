@@ -6,30 +6,36 @@ import java.awt.*;
 public class PanelJuego extends JPanel {
     private PanelEquipo[] equiposVisuales;
     private JButton btnLanzar;
-    private JLabel lblInfoTurno;
+    private JLabel lblMensaje;
 
     public PanelJuego() {
-        setLayout(new BorderLayout(20, 20));
+        setLayout(new BorderLayout(15, 15));
         
-        // Grilla de Equipos (3 filas, 1 columna o viceversa)
+        // Grilla central: 3 filas para los 3 equipos
         JPanel centro = new JPanel(new GridLayout(3, 1, 10, 10));
-        equiposVisuales = new PanelEquipo[3];
+        centro.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
         
-        // Inicialización dummy (se llenará con datos del .properties)
+        equiposVisuales = new PanelEquipo[3];
+        // Inicialización temporal, el controlador pondrá los nombres reales
         for (int i = 0; i < 3; i++) {
             equiposVisuales[i] = new PanelEquipo("Equipo " + (i+1), 
-                                 new String[]{"Jug 1", "Jug 2", "Jug 3"});
+                                 new String[]{"Jugador A", "Jugador B", "Jugador C"});
             centro.add(equiposVisuales[i]);
         }
 
-        // Panel de Control inferior
-        JPanel sur = new JPanel(new FlowLayout());
-        lblInfoTurno = new JLabel("Esperando inicio...");
-        btnLanzar = new JButton("¡LANZAR BALERO!");
-        btnLanzar.setFont(new Font("Arial", Font.BOLD, 18));
+        // Panel inferior de control
+        JPanel sur = new JPanel(new BorderLayout());
+        lblMensaje = new JLabel("¡Carga los equipos para empezar!", SwingConstants.CENTER);
+        lblMensaje.setFont(new Font("Arial", Font.ITALIC, 16));
         
-        sur.add(lblInfoTurno);
-        sur.add(btnLanzar);
+        btnLanzar = new JButton("¡LANZAR BALERO!");
+        btnLanzar.setPreferredSize(new Dimension(200, 50));
+        btnLanzar.setFont(new Font("Arial", Font.BOLD, 20));
+        btnLanzar.setBackground(new Color(34, 139, 34));
+        btnLanzar.setForeground(Color.WHITE);
+
+        sur.add(lblMensaje, BorderLayout.NORTH);
+        sur.add(btnLanzar, BorderLayout.CENTER);
 
         add(centro, BorderLayout.CENTER);
         add(sur, BorderLayout.SOUTH);
@@ -41,5 +47,7 @@ public class PanelJuego extends JPanel {
         }
     }
 
+    public void setMensaje(String texto) { lblMensaje.setText(texto); }
     public JButton getBtnLanzar() { return btnLanzar; }
+    public PanelEquipo getEquipo(int i) { return equiposVisuales[i]; }
 }

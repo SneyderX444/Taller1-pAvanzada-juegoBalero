@@ -1,7 +1,8 @@
 package Controlador;
 
 import Modelo.*;
-import Vista.Vista;
+import Vista.VistaPrincipal;
+import Vista.VistaPrincipal;
 
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
@@ -23,7 +24,7 @@ import java.util.List;
 public class ControlPrincipal {
 
     // ===== Vista =====
-    private Vista vista;
+    private VistaPrincipal vista;
 
     // ===== Modelos =====
     private GestionConfiguracion gestionConfig; // En lugar de ArchivoPropiedades
@@ -51,7 +52,7 @@ public class ControlPrincipal {
     private void inicializarSistema() {
 
         // Vista
-        vista = new Vista();
+        vista = new VistaPrincipal();
 
         // Modelos
         this.gestionConfig = new GestionConfiguracion();
